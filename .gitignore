@@ -21,7 +21,8 @@ env/
 Thumbs.db
 # Generated files
 uploads/
-exports/
+exports/*
+!exports/*.py
 
 # Streamlit cache
 .streamlit/
