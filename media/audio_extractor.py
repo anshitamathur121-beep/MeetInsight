@@ -4,23 +4,12 @@ import os
 import subprocess
 import logging
 
+import imageio_ffmpeg
+
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-def setup_ffmpeg():
-    """Ensure static-ffmpeg paths are added to the environment PATH."""
-    try:
-        import static_ffmpeg
-        static_ffmpeg.add_paths()
-        logger.info("static-ffmpeg paths added successfully.")
-        return True
-    except ImportError:
-        logger.warning("static-ffmpeg is not installed. FFmpeg must be pre-installed on the system.")
-        return False
-    except Exception as e:
-        logger.error(f"Error setting up static-ffmpeg: {e}")
-        return False
 
 def prepare_audio_file(input_path: str, work_dir: str) -> str:
     """
@@ -36,10 +25,9 @@ def prepare_audio_file(input_path: str, work_dir: str) -> str:
     if ext == ".mp4":
         return extract_audio(input_path, os.path.join(work_dir, "extracted_audio.mp3"))
 
-    setup_ffmpeg()
     output_path = os.path.join(work_dir, "converted_audio.mp3")
     cmd = [
-        "ffmpeg", "-y",
+        imageio_ffmpeg.get_ffmpeg_exe(), "-y",
         "-i", input_path,
         "-vn",
         "-acodec", "libmp3lame",
@@ -59,29 +47,26 @@ def prepare_audio_file(input_path: str, work_dir: str) -> str:
 def extract_audio(video_path: str, output_audio_path: str = None) -> str:
     """
     Extracts audio from a video file and saves it as a lightweight mono MP3.
-    
+
     Args:
         video_path (str): Path to the input video file.
         output_audio_path (str, optional): Target path for the output audio.
-        
+
     Returns:
         str: Path to the extracted audio file.
     """
     if not os.path.exists(video_path):
         raise FileNotFoundError(f"Input video file not found: {video_path}")
-        
-    # Setup ffmpeg paths
-    setup_ffmpeg()
-    
+
     if not output_audio_path:
         base, _ = os.path.splitext(video_path)
         output_audio_path = f"{base}_extracted.mp3"
-        
+
     logger.info(f"Extracting audio from {video_path} to {output_audio_path}")
-    
+
     # Run ffmpeg command to extract audio to MP3 mono 22050Hz 64kbps (optimal for speech + upload size)
     cmd = [
-        "ffmpeg", "-y",
+        imageio_ffmpeg.get_ffmpeg_exe(), "-y",
         "-i", video_path,
         "-vn",                      # Disable video
         "-acodec", "libmp3lame",    # Use MP3 codec
@@ -90,10 +75,10 @@ def extract_audio(video_path: str, output_audio_path: str = None) -> str:
         "-b:a", "64k",              # 64kbps bitrate
         output_audio_path
     ]
-    
+
     try:
         # Run subprocess silently
-        result = subprocess.run(
+        subprocess.run(
             cmd,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
